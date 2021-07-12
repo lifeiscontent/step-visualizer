@@ -146,6 +146,8 @@ function mapRange(a1, a2, b1, b2, s) {
 
 const MAX_SIZE = 1000;
 
+let seed = [];
+
 function createTest(input, color) {
   const output = Babel.transform(input, {
     plugins: ["statementCounter"],
@@ -157,10 +159,13 @@ function createTest(input, color) {
   let min = Infinity;
   let runs = [];
   for (let i = 0; i < MAX_SIZE; i++) {
-    window[fn](
-      Array.from({ length: i + 1 }, (v, k) => k + 1),
-      i + 1
-    );
+    if (seed[i] === undefined) {
+      seed[i] = Array.from({ length: i + 1 }, () =>
+        Math.floor(Math.random() * Number.MAX_SAFE_INTEGER)
+      );
+    }
+
+    window[fn](seed[i], i + 1);
     if (max < steps) {
       max = steps;
     }
@@ -175,68 +180,66 @@ function createTest(input, color) {
   context.beginPath();
   context.moveTo(100, stage.height);
   runs.forEach((run, i) => {
-    context.lineTo(i + 100, stage.height - mapRange(0, MAX_SIZE, min, max, run));
+    context.lineTo(
+      i + 100,
+      stage.height - mapRange(0, MAX_SIZE, min, max, run)
+    );
   });
   context.stroke();
 }
 
-const binarySearch = `function binarySearch(arr, value) {
-  let lower = 0;
-  let upper = arr.length - 1;
+// const binarySearch = `function binarySearch(arr, value) {
+//   let lower = 0;
+//   let upper = arr.length - 1;
 
-  while (lower <= upper) {
-    let midpoint = Math.round((upper + lower) / 2);
-    let valueAtMidpoint = arr[midpoint];
+//   while (lower <= upper) {
+//     let midpoint = Math.round((upper + lower) / 2);
+//     let valueAtMidpoint = arr[midpoint];
 
-    if (valueAtMidpoint === value) {
-      return value;
-    } else if (value < valueAtMidpoint) {
-      upper = midpoint - 1;
-    } else if (value > valueAtMidpoint) {
-      lower = midpoint + 1;
-    }
-  }
+//     if (valueAtMidpoint === value) {
+//       return value;
+//     } else if (value < valueAtMidpoint) {
+//       upper = midpoint - 1;
+//     } else if (value > valueAtMidpoint) {
+//       lower = midpoint + 1;
+//     }
+//   }
 
-  return -1;
-}`;
+//   return -1;
+// }`;
 
-createTest(binarySearch, "red");
+// createTest(binarySearch, "red");
 
-const linearSearch = `function linearSearch(arr, value) {
-  let lower = 0;
-  let upper = arr.length - 1;
+// const linearSearch = `function linearSearch(arr, value) {
+//   let lower = 0;
+//   let upper = arr.length - 1;
 
-  while (lower <= upper) {
-    if (arr[lower] === value) {
-      return value;
-    }
+//   while (lower <= upper) {
+//     if (arr[lower] === value) {
+//       return value;
+//     }
 
-    lower++;
-  }
+//     lower++;
+//   }
 
-  return -1;
-}`;
+//   return -1;
+// }`;
 
-createTest(linearSearch, "blue");
+// createTest(linearSearch, "blue");
 
 const bubbleSort = `function bubbleSort(arr) {
-  let lower = 0;
-  let upper = arr.length - 1;
-
-  while (lower < upper) {
-    let a = arr[lower];
-    let b = arr[lower + 1];
-
-    if (a > b) {
-      arr[lower] = b;
-      arr[lower + 1] = a;
+  let temp;
+  for (let i = 0; i < arr.length - 1; i++) {
+    for (let j = 0; j < arr.length - i - 1; j++) {
+      if (arr[j] > arr[j + 1]) {
+        temp = arr[j];
+        arr[j] = arr[j + 1];
+        arr[j + 1] = temp;
+      }
     }
-
-    lower++;
   }
-
-  return arr;
-}`;
+}
+`;
 
 createTest(bubbleSort, "green");
 
@@ -249,7 +252,7 @@ const selectionSort = `function selectionSort(arr) {
       }
     }
 
-    if (lowestNumberIndex != i) {
+    if (lowestNumberIndex !== i) {
       let temp = arr[i];
       arr[i] = arr[lowestNumberIndex];
       arr[lowestNumberIndex] = temp;
