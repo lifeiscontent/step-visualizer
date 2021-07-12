@@ -29,41 +29,110 @@ function statementCounter(babel) {
       FunctionDeclaration(path) {
         fn = path.node.id.name;
       },
-      WhileStatement(path) {
-        path
-          .get("body")
-          .unshiftContainer(
-            "body",
-            t.expressionStatement(t.callExpression(t.identifier("inc"), []))
-          );
-      },
-      IfStatement(path) {
-        path
-          .get("consequent")
-          .unshiftContainer(
-            "body",
-            t.expressionStatement(t.callExpression(t.identifier("inc"), []))
-          );
+      BinaryExpression(path) {
+        if (
+          path.parentPath.isForStatement() ||
+          path.parentPath.isWhileStatement()
+        ) {
+          path.parentPath
+            .get("body")
+            .unshiftContainer(
+              "body",
+              t.addComment(
+                t.expressionStatement(
+                  t.callExpression(t.identifier("inc"), [])
+                ),
+                "trailing",
+                ` ${path.type} (${path.parent.type})`,
+                true
+              )
+            );
+        } else if (path.parentPath.isIfStatement()) {
+          path.parentPath
+            .get("consequent")
+            .unshiftContainer(
+              "body",
+              t.addComment(
+                t.expressionStatement(
+                  t.callExpression(t.identifier("inc"), [])
+                ),
+                "trailing",
+                ` ${path.type} (${path.parent.type})`,
+                true
+              )
+            );
+        }
       },
       VariableDeclaration(path) {
-        path.insertAfter(
-          t.expressionStatement(t.callExpression(t.identifier("inc"), []))
+        if (path.parentPath.isForStatement()) {
+          path.parentPath.insertBefore(
+            t.addComment(
+              t.expressionStatement(t.callExpression(t.identifier("inc"), [])),
+              "trailing",
+              ` ${path.type} (${path.parent.type})`,
+              true
+            )
+          );
+
+          return;
+        }
+
+        path.insertBefore(
+          t.addComment(
+            t.expressionStatement(t.callExpression(t.identifier("inc"), [])),
+            "trailing",
+            ` ${path.type}`,
+            true
+          )
         );
       },
       ReturnStatement(path) {
         path.insertBefore(
-          t.expressionStatement(t.callExpression(t.identifier("inc"), []))
+          t.addComment(
+            t.expressionStatement(t.callExpression(t.identifier("inc"), [])),
+            "trailing",
+            ` ${path.type}`,
+            true
+          )
         );
       },
       AssignmentExpression(path) {
         path.insertAfter(
-          t.expressionStatement(t.callExpression(t.identifier("inc"), []))
+          t.addComment(
+            t.expressionStatement(t.callExpression(t.identifier("inc"), [])),
+            "trailing",
+            ` ${path.type}`,
+            true
+          )
         );
       },
       UpdateExpression(path) {
+        if (path.parentPath.isForStatement()) {
+          path.parentPath
+            .get("body")
+            .unshiftContainer(
+              "body",
+              t.addComment(
+                t.expressionStatement(
+                  t.callExpression(t.identifier("inc"), [])
+                ),
+                "trailing",
+                ` ${path.type} (${path.parent.type})`,
+                true
+              )
+            );
+
+          return;
+        }
         path.insertAfter(
-          t.expressionStatement(t.callExpression(t.identifier("inc"), []))
+          t.addComment(
+            t.expressionStatement(t.callExpression(t.identifier("inc"), [])),
+            "trailing",
+            ` ${path.type}`,
+            true
+          )
         );
+        path.skip();
       },
     },
   };
@@ -89,8 +158,8 @@ function createTest(input, color) {
   let runs = [];
   for (let i = 0; i < MAX_SIZE; i++) {
     window[fn](
-      Array.from({ length: i }, () => 0),
-      i
+      Array.from({ length: i + 1 }, (v, k) => k + 1),
+      i + 1
     );
     if (max < steps) {
       max = steps;
@@ -104,9 +173,9 @@ function createTest(input, color) {
   context.strokeStyle = color;
   context.lineWidth = 2;
   context.beginPath();
-  context.moveTo(0, stage.height);
+  context.moveTo(100, stage.height);
   runs.forEach((run, i) => {
-    context.lineTo(i, stage.height - mapRange(0, MAX_SIZE, min, max, run));
+    context.lineTo(i + 100, stage.height - mapRange(0, MAX_SIZE, min, max, run));
   });
   context.stroke();
 }
@@ -149,3 +218,45 @@ const linearSearch = `function linearSearch(arr, value) {
 }`;
 
 createTest(linearSearch, "blue");
+
+const bubbleSort = `function bubbleSort(arr) {
+  let lower = 0;
+  let upper = arr.length - 1;
+
+  while (lower < upper) {
+    let a = arr[lower];
+    let b = arr[lower + 1];
+
+    if (a > b) {
+      arr[lower] = b;
+      arr[lower + 1] = a;
+    }
+
+    lower++;
+  }
+
+  return arr;
+}`;
+
+createTest(bubbleSort, "green");
+
+const selectionSort = `function selectionSort(arr) {
+  for (let i = 0; i < arr.length - 1; i++) {
+    let lowestNumberIndex = i;
+    for (let j = i + 1; j < arr.length; j++) {
+      if (arr[j] < arr[lowestNumberIndex]) {
+        lowestNumberIndex = j;
+      }
+    }
+
+    if (lowestNumberIndex != i) {
+      let temp = arr[i];
+      arr[i] = arr[lowestNumberIndex];
+      arr[lowestNumberIndex] = temp;
+    }
+  }
+
+  return arr;
+}`;
+
+createTest(selectionSort, "purple");
